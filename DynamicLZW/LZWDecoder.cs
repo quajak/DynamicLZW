@@ -6,7 +6,16 @@ namespace DynamicLZW
     //Based on http://warp.povusers.org/EfficientLZW/part5.html
     public class LZWDecoder
     {
-        public static byte[] Decode(byte[] data, int maxKeySize, int dictionarySize = 256, int offset = 0, int indexSize = 8)
+        /// <summary>
+        /// Decode data stored in the byte array
+        /// </summary>
+        /// <param name="data">Array of data to be decoded</param>
+        /// <param name="maxKeySize">Maximum number of bits the index can have</param>
+        /// <param name="dictionarySize">Size of the intial dictionary</param>
+        /// <param name="dictionaryBaseOffset">In case for custom initial dictionaries an offset for the intial values can be given</param>
+        /// <param name="indexSize">The initial index size when starting the decoding process</param>
+        /// <returns></returns>
+        public static byte[] Decode(byte[] data, int maxKeySize = 16, int dictionarySize = 256, int dictionaryBaseOffset = 0, int indexSize = 8)
         {
             if (maxKeySize > 16)
             {
@@ -19,7 +28,7 @@ namespace DynamicLZW
             // Initialize the dictionary
             for (ushort i = 0; i < dictionarySize; i++)
             {
-                dictionary[dictPos++] = new byte[1] { (byte)(i + offset) };
+                dictionary[dictPos++] = new byte[1] { (byte)(i + dictionaryBaseOffset) };
             }
 
             byte[] indexArr;
