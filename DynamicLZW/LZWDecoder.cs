@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace DynamicLZW
 {
     //Based on http://warp.povusers.org/EfficientLZW/part5.html
     public class LZWDecoder
     {
-        public static byte[] Decode(byte[] data, int maxKeySize, int dictionarySize = 256, int offset = 0)
+        public static byte[] Decode(byte[] data, int maxKeySize, int dictionarySize = 256, int offset = 0, int indexSize = 8)
         {
-            if(maxKeySize > 16)
+            if (maxKeySize > 16)
             {
                 throw new ArgumentOutOfRangeException();
             }
@@ -23,10 +22,8 @@ namespace DynamicLZW
                 dictionary[dictPos++] = new byte[1] { (byte)(i + offset) };
             }
 
-            //int indexSize = 9;
-            int indexSize = 5;
             byte[] indexArr;
-            if(maxKeySize > 8)
+            if (maxKeySize > 8)
             {
                 indexArr = new byte[maxKeySize / 8];
             }
@@ -34,19 +31,20 @@ namespace DynamicLZW
             {
                 indexArr = new byte[1];
             }
-            input.Read(indexArr, 0, indexSize);
-            ushort indexVal = maxKeySize > 8 ? BitConverter.ToUInt16(indexArr) : (ushort)indexArr[0];
-            output.AddRange(dictionary[indexVal]);
-            byte[] oldValue = dictionary[indexVal];
-            while (input.CanRead)
+            ushort indexVal;
+            byte[] oldValue = new byte[0];
+            while (input.CanRead && input.Length - input.Position >= indexSize)
             {
                 input.Read(indexArr, 0, indexSize);
-                indexVal = maxKeySize > 8 ? BitConverter.ToUInt16(indexArr) : (ushort)indexArr[0];
+                indexVal = ToValue(indexArr, indexSize);
                 if (dictionary.ContainsKey(indexVal))
                 {
                     output.AddRange(dictionary[indexVal]);
-                    var B = dictionary[indexVal][0];
-                    dictionary[dictPos++] = Combine(oldValue, B);
+                    if (oldValue.Length != 0)
+                    {
+                        var B = dictionary[indexVal][0];
+                        dictionary[dictPos++] = Combine(oldValue, B);
+                    }
                 }
                 else
                 {
@@ -56,16 +54,28 @@ namespace DynamicLZW
                     dictPos++;
                 }
                 oldValue = dictionary[indexVal];
-                if(dictPos > (1 << indexSize) - 1)
+                if (dictPos > (1 << indexSize) - 1)
                 {
                     indexSize++;
-                    if(indexSize > maxKeySize)
+                    if (indexSize > maxKeySize)
                     {
                         throw new InvalidOperationException();
                     }
                 }
             }
             return output.ToArray();
+        }
+
+        private static ushort ToValue(byte[] aArray, int indexSize)
+        {
+            if (aArray.Length == 1 || indexSize <= 8)
+            {
+                return aArray[0];
+            }
+            else
+            {
+                return (ushort)((aArray[0] << 8) + aArray[1]);
+            }
         }
 
         private static byte[] Combine(byte[] a, byte b)
